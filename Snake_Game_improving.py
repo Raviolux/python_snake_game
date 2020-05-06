@@ -68,7 +68,7 @@ class Player(object):
     update_count_max = 2
     update_count = 0
 
-    def __init__(self, length):
+    def __init__(self, length=4):
         self.length = length
         for i in range(600):  # initialize a lot of blocks to prevent errors
             self.x.append(-220)  # assign number outside of play area
@@ -83,7 +83,6 @@ class Player(object):
         self.update_count += 1
         if self.update_count > self.update_count_max:
             for i in range(self.length - 1, 0, -1):
-                # print(f"self.x[{i}] = self.x[{i - 1}]  ---  self.y[{i}] = self.y[{i - 1}]")
                 self.x[i] = self.x[i - 1]
                 self.y[i] = self.y[i - 1]
 
@@ -140,21 +139,26 @@ class Game:
                 return True
         return False
 
+    @staticmethod
+    def draw(surface, image):
+        surface.blit(image, (0, 0))
+
 
 class App(object):
     player = None
     apple = None
 
-    def __init__(self, surface):
+    def __init__(self):
         self._running = True
         self._display_surf = None
         self._snake_block = None
         self._apple_block = None
-        self.game = surface
+        self._collision = None
+        self.game = Game()
         self.player = Player(4)
-        self.apple = Apple(self.game, randint(0, 7), randint(0, 5))
+        self.apple = Apple(self.game)
         self.red = self.green = self.blue = 0
-        print(self.apple.x, self.apple.y)
+        print('new apple:', self.apple.x, self.apple.y)
 
     def on_init(self):
         pygame.init()
@@ -165,6 +169,7 @@ class App(object):
         self._running = True
         self._snake_block = pygame.image.load('snake.png').convert()
         self._apple_block = pygame.image.load('apple.png').convert()
+        self._collision = pygame.image.load('collision.png').convert()
 
     def on_event(self, event):
         if event.type == QUIT:
@@ -176,16 +181,27 @@ class App(object):
         # collision check with apple
         if self.game.is_collision(self.apple.x, self.apple.y, self.player.x[0], self.player.y[0], 99):
             print('got apple!')
-            self.apple.new_pos(randint(0, 7), randint(0, 5))
+            while True:
+                self.apple.random_pos()
+                for i in range(self.player.length):
+                    if self.game.is_collision(self.player.x[0], self.player.y[0],
+                                              self.player.x[i], self.player.y[i], 95):
+                        continue
+                break
+
             print('new apple: ', self.apple.x, self.apple.y)  # there i'm printing the NEW position of the apple
             self.player.length += 1
 
         # collision check with snake
         for i in range(2, self.player.length):
+
             # range (2, length) because head cannot collide with itself or the two blocks behind it)
             if self.game.is_collision(self.player.x[0], self.player.y[0],
                                       self.player.x[i], self.player.y[i], 95):
                 print('Collision! You lost.')
+                self.game.draw(self._display_surf, self._collision)
+                pygame.display.flip()
+                time.sleep(2)
                 exit(0)
 
         # collision check with walls
@@ -194,6 +210,9 @@ class App(object):
                 self.game.is_collision(self.player.x[0], self.player.y[0], -1001, -201, 1000) or \
                 self.game.is_collision(self.player.x[0], self.player.y[0], -201, -1201, 1200):
             print('Collision! You lost.')
+            self.game.draw(self._display_surf, self._collision)
+            pygame.display.flip()
+            time.sleep(2)
             exit(0)
 
     def on_render(self):
@@ -243,5 +262,5 @@ class App(object):
 
 if __name__ == '__main__':
     the_surface = Game()
-    the_app = App(the_surface)
+    the_app = App()
     the_app.on_execute()
